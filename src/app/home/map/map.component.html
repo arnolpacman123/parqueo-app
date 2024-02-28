@@ -1,0 +1,6 @@
+<div id="map" (leafletMapReady)="onMapReady($event)" style="height: 100%; width: 100%;" leaflet
+     [leafletOptions]="options" [leafletLayersControl]="layersControl">
+  @for (parking of parkings; track parking.id) {
+    <div [leafletLayer]="createMarker(parking)"></div>
+  }
+</div>
