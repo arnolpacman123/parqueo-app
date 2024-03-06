@@ -34,17 +34,6 @@ class PulseIcon extends Icon<PulseIconOptions> {
 
   override createIcon(oldIcon?: HTMLElement): HTMLElement {
     const div = super.createIcon(oldIcon);
-    // Img with gif url
-    const img = document.createElement('img');
-    img.src = this.options.iconUrl!;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.position = 'absolute';
-    img.style.left = '0';
-    img.style.top = '0';
-    img.style.borderRadius = '50%';
-    img.style.border = `2px solid ${ this.options.color }`;
-    div.appendChild(img);
     div.style.borderRadius = '50%';
     div.style.border = `0.25px solid ${ this.options.color }`;
     return div;
