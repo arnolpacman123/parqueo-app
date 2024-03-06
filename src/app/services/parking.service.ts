@@ -10,7 +10,7 @@ export class ParkingService extends Socket {
 
   constructor() {
     super({
-      url: "http://localhost:3000/parking",
+      url: "https://parqueos-api.adaptable.app/parking",
     });
     this.onNewConnection();
     this.onNewDisconnection();

@@ -1,18 +1,75 @@
 import { Component, inject } from '@angular/core';
-import { LeafletModule, LeafletControlLayersConfig } from "@asymmetrik/ngx-leaflet";
+import { LeafletControlLayersConfig, LeafletModule } from "@asymmetrik/ngx-leaflet";
 import {
+  Control,
+  Icon,
+  IconOptions, LatLng,
   latLng,
+  LatLngExpression, LeafletEvent, LocationEvent,
+  Map,
   MapOptions,
-  tileLayer,
-  Map, LatLng, marker, icon,
+  Marker,
+  MarkerOptions,
+  tileLayer
 } from "leaflet";
+import { NgxLeafletLocateModule } from "@runette/ngx-leaflet-locate";
 import { ParkingService } from "../../services/parking.service";
 import { Parking } from "../../models/interfaces";
+
+interface PulseIconOptions extends IconOptions {
+  animate?: boolean;
+  heartbeat: number;
+  fillColor?: string;
+  color?: string;
+}
+
+class PulseIcon extends Icon<PulseIconOptions> {
+  override options!: PulseIconOptions;
+
+  constructor(
+    options: PulseIconOptions
+  ) {
+    super(options);
+  }
+
+  override createIcon(oldIcon?: HTMLElement): HTMLElement {
+    const div = super.createIcon(oldIcon);
+    // Img with gif url
+    const img = document.createElement('img');
+    img.src = this.options.iconUrl!;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.position = 'absolute';
+    img.style.left = '0';
+    img.style.top = '0';
+    img.style.borderRadius = '50%';
+    img.style.border = `2px solid ${ this.options.color }`;
+    div.appendChild(img);
+    div.style.borderRadius = '50%';
+    div.style.border = `0.25px solid ${ this.options.color }`;
+    return div;
+  }
+}
+
+interface PulseMarkerOptions extends MarkerOptions {
+  icon?: PulseIcon;
+}
+
+class PulseMarker extends Marker {
+  override options!: PulseMarkerOptions;
+
+  constructor(
+    latlng: LatLngExpression,
+    options: PulseMarkerOptions,
+  ) {
+    super(latlng, options);
+  }
+}
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [ LeafletModule ],
+  imports: [ LeafletModule, NgxLeafletLocateModule ],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss'
 })
@@ -46,6 +103,21 @@ export class MapComponent {
     },
     overlays: {},
   };
+
+  locateOptions: Control.LocateOptions = {
+    position: 'bottomright',
+    strings: {
+      title: 'Mostrar mi ubicación actual',
+    },
+    locateOptions: {
+      enableHighAccuracy: true,
+      watch: true,
+    },
+    keepCurrentZoomLevel: true,
+    flyTo: true,
+    cacheLocation: true,
+  };
+  myLocation?: LatLng;
   map!: Map;
   parkings: Parking[] = [];
   parkingService = inject(ParkingService);
@@ -54,33 +126,44 @@ export class MapComponent {
     this.parkingService.onUpdate().subscribe((parkings) => {
       this.parkings = parkings;
     });
+
   }
 
   onMapReady(map: Map) {
     this.map = map;
+    this.map.on('locatedeactivate', this._onLocateDeactivate.bind(this));
+  }
+
+  _onLocateDeactivate(_: LeafletEvent) {
+    this.myLocation = undefined!;
   }
 
   createMarker(parking: Parking) {
-    const newMarker = marker([ parking.geom!.coordinates[1], parking.geom!.coordinates[0] ], {
-      icon: icon({
-        iconSize: [ 25, 32 ],
-        iconUrl: parking.capacity === parking.currentOccupancy ? 'assets/parking-full.svg' : 'assets/parking-free.svg',
+    const pulseIcon = new PulseIcon({
+      iconSize: [ 23, 23 ],
+      iconUrl: parking.capacity === parking.currentOccupancy ? 'assets/parking-full.gif' : 'assets/parking-free.gif',
+      animate: true,
+      heartbeat: 1,
+      fillColor: parking.capacity === parking.currentOccupancy ? 'red' : 'green',
+      color: parking.capacity === parking.currentOccupancy ? 'red' : 'green',
+    });
 
-      }),
+    return new PulseMarker([ parking.geom!.coordinates[1], parking.geom!.coordinates[0] ], {
+      icon: pulseIcon,
     });
-    newMarker.on('click', () => {
-      this.updateParking(parking);
-    });
-    return newMarker;
   }
 
-  updateParking(parking: Parking) {
-    if (parking.capacity === parking.currentOccupancy) {
-      return;
-    }
-    parking.currentOccupancy!++;
-    this.parkingService.update(parking).subscribe((parkings) => {
-      this.parkings = parkings;
-    });
+  // updateParking(parking: Parking) {
+  //   if (parking.capacity === parking.currentOccupancy) {
+  //     return;
+  //   }
+  //   parking.currentOccupancy!++;
+  //   this.parkingService.update(parking).subscribe((parkings) => {
+  //     this.parkings = parkings;
+  //   });
+  // }
+
+  _onNewLocation(event: LocationEvent) {
+    this.myLocation = event.latlng;
   }
 }

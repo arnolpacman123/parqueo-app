@@ -4,3 +4,8 @@
     <div [leafletLayer]="createMarker(parking)"></div>
   }
 </div>
+<leaflet-locate-control
+  [options]="locateOptions"
+  [map]="map"
+  (location$)="_onNewLocation($event)"
+></leaflet-locate-control>
